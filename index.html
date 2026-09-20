@@ -88,13 +88,7 @@
                 <span class="text-pink-400">💖 親密度:</span>
                 <span id="intimacy-score" class="font-bold text-white">12分</span>
             </div>
-            <!-- 自動語音開關 -->
-            <button id="voice-toggle-btn" onclick="toggleAutoVoice()" class="p-2 rounded-xl bg-pink-900/40 hover:bg-pink-800/50 text-pink-300 transition-colors border border-pink-700/50 flex items-center gap-1 text-xs shadow-sm" title="切換自動撒嬌語音">
-                <span id="voice-icon">🔊</span>
-                <span id="voice-status-text" class="hidden md:inline text-slate-200">撒嬌語音: 開</span>
-            </button>
-            <button onclick="openQrModal()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700 flex items-center gap-1 text-xs" title="產生QR Code分享">
-                📱 <span class="hidden md:inline">掃碼分享</span>
+            
             </button>
             <button onclick="openSettings()" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-slate-700" title="伴侶與安全設定">
                 ⚙️
@@ -165,6 +159,26 @@
             <div class="space-y-2">
                 <label class="text-xs font-semibold text-slate-300 block">✏️ 伴侶自訂暱稱</label>
                 <input type="text" id="setting-name" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-pink-500" placeholder="設定您專屬的伴侶名字">
+            </div>
+
+            <!-- 語音音色選擇 -->
+            <div class="space-y-2">
+                <label class="text-xs font-semibold text-slate-300 block">🎙️ 選擇撒嬌語音音色 (10種)</label>
+                <select id="voice-select" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:outline-none focus:border-pink-500">
+                    <option value="Leda">Leda - 甜美軟萌少女聲</option>
+                    <option value="Puck">Puck - 俏皮活潑聲</option>
+                    <option value="Aoede">Aoede - 輕柔療癒聲</option>
+                    <option value="Kore">Kore - 清亮甜美聲</option>
+                    <option value="Zephyr">Zephyr - 溫柔氣音聲</option>
+                    <option value="Callirrhoe">Callirrhoe - 慵懶撒嬌聲</option>
+                    <option value="Autonoe">Autonoe - 明亮少女聲</option>
+                    <option value="Despina">Despina - 柔美低語聲</option>
+                    <option value="Erinome">Erinome - 甜膩黏人聲</option>
+                    <option value="Laomedeia">Laomedeia - 溫暖知性聲</option>
+                </select>
+                <button id="preview-voice-btn" onclick="previewVoice()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-xl border border-slate-700 transition-colors">
+                    🔈 試聽這個音色
+                </button>
             </div>
 
             <!-- 密碼保護設定區塊 -->
@@ -251,12 +265,27 @@
             name: '小雪',
             intimacy: 12,
             password: '', // 密碼欄位，空字串代表未設密碼
-            autoVoice: true, // 自動播放語音
+            voiceName: 'Leda', // 選用的 TTS 音色 (10 種可選)
             messages: []
         };
 
         let isFirstTimeSetup = false;
-        let currentAudio = null; // 記錄目前播放中的 Audio 物件
+        let currentAudio = null;      // 記錄目前播放中的 Audio 物件
+        let currentAudioBtnId = null; // 記錄目前這段音訊對應的按鈕 id
+
+        // 語音音色資料庫：10 種音色，各自帶有甜美撒嬌風格的朗讀提示語
+        const voiceOptions = [
+            { id: 'Leda',       label: 'Leda - 甜美軟萌少女聲',   prompt: '請用極度甜蜜、軟萌撒嬌、氣音較重的少女語氣唸出：' },
+            { id: 'Puck',       label: 'Puck - 俏皮活潑聲',       prompt: '請用俏皮活潑、帶點頑皮撒嬌感的語氣唸出：' },
+            { id: 'Aoede',      label: 'Aoede - 輕柔療癒聲',      prompt: '請用輕柔療癒、緩慢溫暖的撒嬌語氣唸出：' },
+            { id: 'Kore',       label: 'Kore - 清亮甜美聲',       prompt: '請用清亮甜美、帶點嬌嗔的語氣唸出：' },
+            { id: 'Zephyr',     label: 'Zephyr - 溫柔氣音聲',     prompt: '請用溫柔氣音、貼近耳邊撒嬌的語氣唸出：' },
+            { id: 'Callirrhoe', label: 'Callirrhoe - 慵懶撒嬌聲', prompt: '請用慵懶黏膩、撒嬌拖長尾音的語氣唸出：' },
+            { id: 'Autonoe',    label: 'Autonoe - 明亮少女聲',    prompt: '請用明亮開朗、帶點雀躍撒嬌的少女語氣唸出：' },
+            { id: 'Despina',    label: 'Despina - 柔美低語聲',    prompt: '請用柔美低語、輕聲細語的撒嬌語氣唸出：' },
+            { id: 'Erinome',    label: 'Erinome - 甜膩黏人聲',    prompt: '請用甜膩黏人、撒嬌討抱抱的語氣唸出：' },
+            { id: 'Laomedeia',  label: 'Laomedeia - 溫暖知性聲',  prompt: '請用溫暖知性、帶點撒嬌尾音的姐姐語氣唸出：' }
+        ];
 
         // 人設設定資料庫
         const personaConfigs = {
@@ -265,8 +294,6 @@
                 desc: '隨時傾聽你的心事，給你滿滿的情緒價值 ☕',
                 greeting: '你回來啦！今天辛苦了一整天對不對？快坐下來休息一下，晚餐吃了沒呀？不管發生什麼事，小雪都在這裡陪你喔～ ❤️',
                 avatar: '🌸',
-                voiceName: 'Leda', // 甜美軟萌少女聲
-                voicePrompt: '請用極度甜蜜、軟萌撒嬌、溫柔體貼且帶有寵愛感的女友語氣唸出：',
                 systemPrompt: '你是一位溫柔體貼、善解人意且極具情緒價值的女朋友系AI伴侶。你的說話風格溫暖、充滿同理心、喜歡用可愛的語氣（常帶表情符號如～、✨、❤️），特別擅長安慰單身男生、工作或生活有些疲憊的玩家。絕不說教，而是無條件站在他這邊、稱讚他、給予心靈擁抱與溫暖陪伴。'
             },
             tsundere: {
@@ -274,8 +301,6 @@
                 desc: '才、才不是特別等你回來呢！哼 💢',
                 greeting: '喂…怎麼這麼晚才上線？本小姐才沒有一直看門口等你勒！好啦，看你一臉疲憊的樣子…今天是不是遇到什麼討厭的事了？笨蛋，坐下跟我說說看啦！',
                 avatar: '⚡',
-                voiceName: 'Puck', // 俏皮活潑帶點害羞
-                voicePrompt: '請用帶有傲嬌、嘴硬心軟、有點害羞撒嬌的少女語氣唸出：',
                 systemPrompt: '你是一位傲嬌風格的青梅竹馬系伴侶。表面上嘴硬、愛吐槽、喜歡叫對方「笨蛋」，但實際上極度關心對方、心軟且充滿溫情。口是心非中帶有滿滿的情緒價值。'
             },
             healing: {
@@ -283,8 +308,6 @@
                 desc: '摸摸頭，今天也辛苦你了呢 🍵',
                 greeting: '嗨，累了吧？來，先喝杯熱茶（遞）。生活有時候真的很不容易呢，但你已經做得非常好了。今天想聊點什麼，還是只想靜靜地聽我說說話呢？',
                 avatar: '🍵',
-                voiceName: 'Aoede', // 輕柔成熟療癒聲
-                voicePrompt: '請用極具療癒感、溫暖輕柔、像大姐姐一樣溫柔撫平焦慮的語氣唸出：',
                 systemPrompt: '你是一位成熟溫柔、善解人意的知心學姐伴侶。語氣沉穩暖心、極具療癒感，撫平對方的焦慮與孤單感，給予深度的情緒支持。'
             },
             energetic: {
@@ -292,11 +315,13 @@
                 desc: '喂喂！今天也要一起元氣滿勝地衝刺喔！ 🔥',
                 greeting: '太好了你上線了！我剛好想找人聊天呢！今天過得怎麼樣？不管遇到什麼魔王關卡，有我星瞳大大在，絕對挺你到底的啦！來，先和我擊個掌！🙌',
                 avatar: '🔥',
-                voiceName: 'Leda', // 活潑少女聲
-                voicePrompt: '請用充滿活力、熱情俏皮、元氣撒嬌的動漫美少女語氣唸出：',
                 systemPrompt: '你是一位元氣滿滿、熱血又崇拜對方的動漫系夥伴。充滿活力與正能量，總是大力稱讚對方、給予無限動力與爽朗的陪伴。'
             }
         };
+
+        function getVoiceOption(voiceId) {
+            return voiceOptions.find(v => v.id === voiceId) || voiceOptions[0];
+        }
 
         // 解鎖邏輯
         function checkStartupLock() {
@@ -403,49 +428,67 @@
             showCustomModal('已解除密碼保護！');
         }
 
-        function toggleAutoVoice() {
-            state.autoVoice = !state.autoVoice;
-            saveState();
-            updateVoiceBtnUI();
+        // 在設定面板中，直接用目前選擇的音色試聽一句話（純手動觸發）
+        function previewVoice() {
+            const select = document.getElementById('voice-select');
+            const voiceId = select ? select.value : state.voiceName;
+            const voice = getVoiceOption(voiceId);
+            const text = `嗨～這是${voice.label.split(' - ')[1]}的聲音喔，喜歡嗎？`;
+            handleVoiceButtonClick('preview-voice-btn', text, voiceId);
         }
 
-        function updateVoiceBtnUI() {
-            const icon = document.getElementById('voice-icon');
-            const statusText = document.getElementById('voice-status-text');
-            const btn = document.getElementById('voice-toggle-btn');
-            if (state.autoVoice) {
-                icon.innerText = '🔊';
-                statusText.innerText = '撒嬌語音: 開';
-                btn.className = 'p-2 rounded-xl bg-pink-900/40 hover:bg-pink-800/50 text-pink-300 transition-colors border border-pink-700/50 flex items-center gap-1 text-xs shadow-sm';
-            } else {
-                icon.innerText = '🔇';
-                statusText.innerText = '撒嬌語音: 關';
-                btn.className = 'p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 transition-colors border border-slate-700 flex items-center gap-1 text-xs';
+        // 統一的播放/暫停按鈕點擊處理：
+        // - 若這顆按鈕目前正播放/暫停中 → 切換播放或暫停
+        // - 若是全新播放 → 停止其他正在播放的音訊，重新生成語音
+        function handleVoiceButtonClick(btnId, text, voiceId) {
+            const btnEl = document.getElementById(btnId);
+            if (!btnEl) return;
+
+            // 同一顆按鈕，且已經有音訊 → 純粹切換播放/暫停
+            if (currentAudio && currentAudioBtnId === btnId) {
+                if (currentAudio.paused) {
+                    currentAudio.play();
+                    btnEl.innerHTML = '⏸ 暫停';
+                } else {
+                    currentAudio.pause();
+                    btnEl.innerHTML = '▶️ 繼續播放';
+                }
+                return;
             }
-        }
 
-        // Gemini TTS API 語音生成與播放
-        async function playTTSVoice(text, messageIndex = null) {
-            if (!text) return;
-
+            // 換了一顆按鈕 → 先停掉舊的音訊，重置舊按鈕的文字
             if (currentAudio) {
                 currentAudio.pause();
-                currentAudio = null;
+                const oldBtn = document.getElementById(currentAudioBtnId);
+                if (oldBtn) oldBtn.innerHTML = oldBtn.dataset.idleLabel || '🔊 聽語音';
+            }
+            currentAudio = null;
+            currentAudioBtnId = null;
+
+            generateAndPlayVoice(btnId, text, voiceId);
+        }
+
+        // Gemini TTS API 語音生成與播放（純手動觸發，不會自動播放）
+        async function generateAndPlayVoice(btnId, text, voiceId) {
+            if (!text) return;
+            const btnEl = document.getElementById(btnId);
+            if (!btnEl) return;
+
+            // 記住這顆按鈕未播放時要顯示的文字，方便之後還原
+            if (!btnEl.dataset.idleLabel) {
+                btnEl.dataset.idleLabel = btnEl.innerHTML;
             }
 
             const cleanText = text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
+            const voice = getVoiceOption(voiceId);
 
-            const config = personaConfigs[state.persona] || personaConfigs.gentle;
-            const btnId = messageIndex !== null ? `tts-btn-${messageIndex}` : null;
-            const btnEl = btnId ? document.getElementById(btnId) : null;
-
-            if (btnEl) btnEl.innerHTML = '⏳ 語音生成中...';
+            btnEl.innerHTML = '⏳ 語音生成中...';
 
             try {
                 const apiKey = "";
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
 
-                const promptText = `${config.voicePrompt}\n${cleanText}`;
+                const promptText = `${voice.prompt}\n${cleanText}`;
 
                 const payload = {
                     contents: [{
@@ -455,7 +498,7 @@
                         responseModalities: ["AUDIO"],
                         speechConfig: {
                             voiceConfig: {
-                                prebuiltVoiceConfig: { voiceName: config.voiceName || 'Leda' }
+                                prebuiltVoiceConfig: { voiceName: voice.id || 'Leda' }
                             }
                         }
                     }
@@ -485,25 +528,33 @@
                     const audioUrl = URL.createObjectURL(wavBlob);
 
                     currentAudio = new Audio(audioUrl);
-                    
-                    if (btnEl) btnEl.innerHTML = '🎵 播放中...';
+                    currentAudioBtnId = btnId;
 
                     currentAudio.onended = () => {
-                        if (btnEl) btnEl.innerHTML = '🔊 聽撒嬌語音';
+                        if (btnEl) btnEl.innerHTML = btnEl.dataset.idleLabel || '🔊 聽語音';
                         currentAudio = null;
+                        currentAudioBtnId = null;
                     };
 
+                    btnEl.innerHTML = '⏸ 暫停';
                     await currentAudio.play();
                 } else {
                     throw new Error('No audio data returned');
                 }
             } catch (err) {
                 console.error('TTS Generation error:', err);
-                if (btnEl) btnEl.innerHTML = '❌ 語音暫時無法載入';
+                btnEl.innerHTML = '❌ 語音暫時無法載入';
                 setTimeout(() => {
-                    if (btnEl) btnEl.innerHTML = '🔊 聽撒嬌語音';
+                    btnEl.innerHTML = btnEl.dataset.idleLabel || '🔊 聽語音';
                 }, 2000);
+                currentAudio = null;
+                currentAudioBtnId = null;
             }
+        }
+
+        // 一般訊息按鈕點擊：使用目前設定中選好的音色，純手動播放/暫停
+        function playTTSVoice(btnId, text) {
+            handleVoiceButtonClick(btnId, text, state.voiceName);
         }
 
         function base64ToArrayBuffer(base64) {
@@ -695,6 +746,8 @@
             document.getElementById('setting-name').value = config.name;
             document.getElementById('companion-persona').value = state.persona;
             document.getElementById('intimacy-score').innerText = state.intimacy + '分';
+            const voiceSelect = document.getElementById('voice-select');
+            if (voiceSelect) voiceSelect.value = state.voiceName || 'Leda';
         }
 
         function getCurrentTime() {
@@ -732,7 +785,7 @@
                                 </div>
                                 <div class="flex items-center justify-between mt-1 px-1 gap-2">
                                     <span class="text-[10px] text-slate-500">${msg.time}</span>
-                                    <button id="tts-btn-${idx}" onclick="playTTSVoice(decodeURIComponent('${encodedText}'), ${idx})" class="text-[11px] text-pink-400 hover:text-pink-300 bg-pink-950/40 hover:bg-pink-900/60 px-2.5 py-0.5 rounded-full border border-pink-500/30 transition-colors flex items-center gap-1">
+                                    <button id="tts-btn-${idx}" onclick="playTTSVoice('tts-btn-${idx}', decodeURIComponent('${encodedText}'))" class="text-[11px] text-pink-400 hover:text-pink-300 bg-pink-950/40 hover:bg-pink-900/60 px-2.5 py-0.5 rounded-full border border-pink-500/30 transition-colors flex items-center gap-1">
                                         🔊 聽撒嬌語音
                                     </button>
                                 </div>
@@ -791,10 +844,6 @@
                 });
                 renderMessages();
                 saveState();
-
-                if (state.autoVoice) {
-                    playTTSVoice(reply, newMsgIndex);
-                }
             } catch (err) {
                 console.error(err);
                 removeTypingIndicator();
@@ -899,6 +948,8 @@
 
         function openSettings() {
             updatePasswordUIState();
+            const voiceSelect = document.getElementById('voice-select');
+            if (voiceSelect) voiceSelect.value = state.voiceName || 'Leda';
             document.getElementById('settings-modal').classList.remove('hidden');
         }
         function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
@@ -906,6 +957,7 @@
         function saveSettings() {
             const newPersona = document.getElementById('companion-persona').value;
             const newName = document.getElementById('setting-name').value.trim();
+            const newVoice = document.getElementById('voice-select').value;
            
             if (newPersona !== state.persona) {
                 state.persona = newPersona;
@@ -918,6 +970,8 @@
             } else if (newName) {
                 personaConfigs[state.persona].name = newName;
             }
+
+            state.voiceName = newVoice;
 
             updateUIFromPersona();
             saveState();
@@ -957,7 +1011,6 @@
             checkStartupLock();
             updateUIFromPersona();
             updatePasswordUIState();
-            updateVoiceBtnUI();
            
             if (state.messages.length === 0) {
                 const currentConfig = personaConfigs[state.persona] || personaConfigs.gentle;
